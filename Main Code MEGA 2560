@@ -1,0 +1,144 @@
+#include <Arduino.h>
+
+// Define motor pins for each axis
+const int motor1DirPinA = 2; //E
+const int motor1DirPinB = 3; //E
+const int motor2DirPinA = 5; //B
+const int motor2DirPinB = 4; //B
+const int motor3DirPinA = 6; //D
+const int motor3DirPinB = 7; //D
+const int motor4DirPinA = 9; //C
+const int motor4DirPinB = 8; //C
+const int motor5DirPinA = 10; //A
+const int motor5DirPinB = 11; //A
+
+// Define pins for the stopper switches (excluding stopper1Pin)
+const int stopper2Pin = 41; // Replace with the actual pin number for stopper switch 2
+const int stopper3Pin = 35; // Replace with the actual pin number for stopper switch 3
+const int stopper4Pin = 39; // Replace with the actual pin number for stopper switch 4
+const int stopper5Pin = 37; // Replace with the actual pin number for stopper switch 5
+
+// Define delay for motor movement
+const unsigned long motorDelay = 1000; // Delay in milliseconds
+
+unsigned long motorStopTime = 0; // Variable to track motor stop time
+const unsigned long motorRunDuration = 500; // Duration for motors to run (in milliseconds)
+
+void setup() {
+  Serial.begin(9600);
+
+  // Set motor pins as outputs
+  pinMode(motor1DirPinA, OUTPUT);
+  pinMode(motor1DirPinB, OUTPUT);
+  pinMode(motor2DirPinA, OUTPUT);
+  pinMode(motor2DirPinB, OUTPUT);
+  pinMode(motor3DirPinA, OUTPUT);
+  pinMode(motor3DirPinB, OUTPUT);
+  pinMode(motor4DirPinA, OUTPUT);
+  pinMode(motor4DirPinB, OUTPUT);
+  pinMode(motor5DirPinA, OUTPUT);
+  pinMode(motor5DirPinB, OUTPUT);
+
+  // Set stopper switch pins as inputs with internal pull-up resistors (excluding stopper1Pin)
+  pinMode(stopper2Pin, INPUT_PULLUP);
+  pinMode(stopper3Pin, INPUT_PULLUP);
+  pinMode(stopper4Pin, INPUT_PULLUP);
+  pinMode(stopper5Pin, INPUT_PULLUP);
+
+  homeAllAxes();
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    char command = Serial.read();
+    executeCommand(command);
+  }
+
+  if (millis() - motorStopTime >= motorRunDuration) {
+    stopMotors();
+  }
+}
+
+void executeCommand(char command) {
+  switch (command) {
+    case '1':
+      moveMotor(motor1DirPinA, motor1DirPinB, true); // Move motor 1 forward
+      break;
+    case '2':
+      moveMotor(motor1DirPinA, motor1DirPinB, false); // Move motor 1 backward
+      break;
+    case '3':
+      moveMotor(motor2DirPinA, motor2DirPinB, true); // Move motor 2 forward
+      break;
+    case '4':
+      moveMotor(motor2DirPinA, motor2DirPinB, false); // Move motor 2 backward
+      break;
+    case '5':
+      moveMotor(motor3DirPinA, motor3DirPinB, true); // Move motor 3 forward
+      break;
+    case '6':
+      moveMotor(motor3DirPinA, motor3DirPinB, false); // Move motor 3 backward
+      break;
+    case 'w':
+      moveMotor(motor4DirPinA, motor4DirPinB, true); // Move motor 4 forward
+      break;
+    case 's':
+      moveMotor(motor4DirPinA, motor4DirPinB, false); // Move motor 4 backward
+      break;
+    case 'a':
+      moveMotor(motor5DirPinA, motor5DirPinB, true); // Move motor 5 forward
+      break;
+    case 'd':
+      moveMotor(motor5DirPinA, motor5DirPinB, false); // Move motor 5 backward
+      break;
+    case 'g':
+      stopMotors(); // Stop all motors
+      break;
+    default:
+      break;
+  }
+  
+  motorStopTime = millis(); // Reset motor stop time on new command
+}
+
+void moveMotor(int dirPinA, int dirPinB, bool forward) {
+  digitalWrite(dirPinA, forward ? HIGH : LOW);
+  digitalWrite(dirPinB, forward ? LOW : HIGH);
+}
+
+void stopMotor(int dirPinA, int dirPinB) {
+  digitalWrite(dirPinA, LOW);
+  digitalWrite(dirPinB, LOW);
+}
+
+void stopMotors() {
+  stopMotor(motor1DirPinA, motor1DirPinB);
+  stopMotor(motor2DirPinA, motor2DirPinB);
+  stopMotor(motor3DirPinA, motor3DirPinB);
+  stopMotor(motor4DirPinA, motor4DirPinB);
+  stopMotor(motor5DirPinA, motor5DirPinB);
+}
+
+void homeAllAxes() {
+  // Home each axis sequentially during startup (excluding motor 1)
+  homeAxis(motor2DirPinA, motor2DirPinB, stopper2Pin); // Home motor 2
+  homeAxis(motor3DirPinA, motor3DirPinB, stopper3Pin); // Home motor 3
+  homeAxis(motor4DirPinA, motor4DirPinB, stopper4Pin); // Home motor 4
+  homeAxis(motor5DirPinA, motor5DirPinB, stopper5Pin); // Home motor 5
+  // You can add homing for additional axes here as needed
+}
+
+void homeAxis(int dirPinA, int dirPinB, int stopperPin) {
+  // Move the motor until it hits the stopper switch
+  while (digitalRead(stopperPin) == HIGH) {
+    digitalWrite(dirPinA, HIGH);
+    digitalWrite(dirPinB, LOW);
+  }
+
+  // Stop the motor when the stopper switch is activated
+  digitalWrite(dirPinA, LOW);
+  digitalWrite(dirPinB, LOW);
+
+  // Optional: Add some additional delay for stability
+  delay(500);
+}
